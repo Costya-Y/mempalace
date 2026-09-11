@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Optional, Protocol
 
 from .models import ConflictResult, CurationCandidate, CurationResult, Decision
 from .store import CanonicalStore
@@ -34,7 +34,12 @@ class CuratorPolicy:
 
 
 class MemoryCurator:
-    def __init__(self, store: CanonicalStore, policy: CuratorPolicy | None = None, conflict_detector: ConflictDetector | None = None) -> None:
+    def __init__(
+        self,
+        store: CanonicalStore,
+        policy: Optional[CuratorPolicy] = None,
+        conflict_detector: Optional[ConflictDetector] = None,
+    ) -> None:
         self.store = store
         self.policy = policy or CuratorPolicy()
         self.conflict_detector = conflict_detector or NoopConflictDetector()
@@ -50,16 +55,39 @@ class MemoryCurator:
         if self.policy.require_agent_id and not candidate.agent_id.strip():
             return CurationResult(Decision.HOLD, sha, "agent_id is required")
         if candidate.confidence < self.policy.min_confidence:
-            return CurationResult(Decision.HOLD, sha, f"confidence {candidate.confidence:.3f} is below {self.policy.min_confidence:.3f}")
+            return CurationResult(
+                Decision.HOLD,
+                sha,
+                f"confidence {candidate.confidence:.3f} is below {self.policy.min_confidence:.3f}",
+            )
         if candidate.sensitivity not in self.policy.allowed_sensitivities:
-            return CurationResult(Decision.HOLD, sha, f"sensitivity '{candidate.sensitivity}' requires separate approval")
+            return CurationResult(
+                Decision.HOLD,
+                sha,
+                f"sensitivity '{candidate.sensitivity}' requires separate approval",
+            )
 
         existing = self.store.find_by_hash(sha)
         if existing is not None:
-            return CurationResult(Decision.REJECT, sha, "exact content already exists in canonical knowledge", canonical_ref=existing.relative_path)
+            return CurationResult(
+                Decision.REJECT,
+                sha,
+                "exact content already exists in canonical knowledge",
+                canonical_ref=existing.relative_path,
+            )
 
         conflict = self.conflict_detector.detect(candidate)
         if conflict.conflict:
-            return CurationResult(Decision.HOLD, sha, conflict.reason or "candidate conflicts with canonical knowledge", conflict_references=conflict.references)
+            return CurationResult(
+                Decision.HOLD,
+                sha,
+                conflict.reason or "candidate conflicts with canonical knowledge",
+                conflict_references=conflict.references,
+            )
 
-        return CurationResult(Decision.PROMOTE, sha, "eligible for canonical promotion", requires_explicit_promotion=self.policy.explicit_promotion)
+        return CurationResult(
+            Decision.PROMOTE,
+            sha,
+            "eligible for canonical promotion",
+            requires_explicit_promotion=self.policy.explicit_promotion,
+        )
