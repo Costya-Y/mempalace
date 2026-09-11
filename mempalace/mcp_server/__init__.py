@@ -27,6 +27,11 @@ Tools (write):
   mempalace_delete_drawer   — remove a drawer by ID
   mempalace_delete_by_source — bulk-remove all drawers mined from one source_file
 
+Apprentice canonical-memory tools (opt-in):
+  mempalace_apprentice_status   — show Git knowledge-boundary configuration
+  mempalace_apprentice_curate   — side-effect-free promotion decision
+  mempalace_apprentice_promote  — explicitly write reviewed content to Git working tree
+
 Tools (maintenance):
   mempalace_reconnect       — force cache invalidation and reconnect after external writes
 """
@@ -152,6 +157,7 @@ _FRAGMENTS = (
     "tools_diary.py",
     "tools_coord.py",
     "schemas.py",
+    "tools_apprentice.py",
     "protocol.py",
     "http.py",
     "runtime.py",
